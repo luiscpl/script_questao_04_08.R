@@ -1,0 +1,118 @@
+
+
+##############LENDO E CARREGANDO OS PACOTES
+#### SQLITE
+install.packages('RSQLite', repos='http://cran.rstudio.com')
+require (RSQLite)
+#### importar a base CSV 
+install.packages('readr', repos='http://cran.rstudio.com')
+require (readr)
+
+
+#### importando a base csv para o banco em sqlite
+#realizando a conexao com banco
+filename = "C:/PROVA/SIMULACAO.db"
+sqlite.driver = dbDriver("SQLite")
+db = dbConnect(sqlite.driver,dbname = filename)
+dbListTables(db)
+
+#DIRETORIO DAS BASES
+setwd("C:/PROVA")
+
+#IMPORTANDO A BASE CSV PARA SQLITE
+dbWriteTable(db, "simulacao_ipea_v2",read_delim("C:/PROVA/simulacao_ipea_v2.csv", 
+                                                ";", escape_double = FALSE, trim_ws = TRUE))
+
+###QUESTAO 04
+
+###a query abaixo monta uma tabela com a quantidade de trabalhadores
+#do sexo masculino maior que 50 anos s no estado da BA
+dbSendQuery(db, "SELECT ANO, COUNT (*) AS FREQUENCIES
+FROM simulacao_ipea_v2
+WHERE
+ANO = '2019' AND
+SEXO = 'M' AND
+IDADE > 50 AND 
+UF = 'BA'
+GROUP BY ANO 
+")
+
+
+#encontrei 3.108 (LETRA e)
+
+###QUESTAO 05
+#####obtive uma tabela com quantitativo de registros do sexo feminino
+dbSendQuery(db, "CREATE TABLE  ESTABELECIMENTO AS
+SELECT ANO,ORGAO, COUNT (*) AS QTD
+FROM simulacao_ipea_v2
+WHERE
+SEXO = 'F' 
+GROUP BY ANO,ORGAO
+")
+
+###a tabela obtida, ordenei de forma descrescente para saber quem teve maior
+###quantitativo de registros no sexo feminino
+dbSendQuery(db, "SELECT ANO,ORGAO, QTD
+FROM ESTABELECIMENTO
+ORDER BY QTD DESC
+")
+
+#2017 ABC 882 (LETRA b)
+
+###QUESTAO 06
+
+#####coloquei o quantitativos de registros por grau de escolaridade no ano de 2015
+dbSendQuery(db, "CREATE TABLE  NIVEL AS
+SELECT ESCOLARIDADE, COUNT (*) AS QTD
+FROM simulacao_ipea_v2
+WHERE
+ANO = '2015' 
+GROUP BY ESCOLARIDADE
+")
+
+#### no excel, eu fiz a % acumulado e encontrei no nível 4 42,9%
+####(marcando a letra e)
+
+###QUESTAO 07
+
+#criei uma tabela com números de mulheres registradas no estabelecimento UFSJ, 
+#apenas para o ano de 2010 desconsiderando o registro sem a raça declarada
+dbSendQuery(db, "CREATE TABLE  RACA AS
+SELECT RACA, COUNT (*) AS QTD
+FROM simulacao_ipea_v2
+WHERE
+ANO = '2010' AND
+SEXO = 'F' AND
+ORGAO = 'UFSJ' 
+GROUP BY RACA
+HAVING RACA is  not null
+")
+
+
+#ordenei o quantitativo de individuos de forma ascendente 
+dbSendQuery(db, "SELECT * FROM RACA
+ORDER BY QTD ASC
+")
+
+#RESPOSTA: AMARELO - QTD 30 (LETRA A)
+
+###QUESTAO 08
+
+# criei uma tabela com total de individusor  por ano, sexo (sem registro) e raça 
+dbSendQuery(db, "CREATE TABLE  T1 AS
+SELECT ANO, SEXO, RACA, COUNT (*) AS QTD
+FROM simulacao_ipea_v2
+GROUP BY ANO, SEXO, RACA
+HAVING SEXO is  not null
+")
+
+# tabela ignorando sem raça declarada 
+dbSendQuery(db, "SELECT ANO, SEXO, RACA, QTD
+FROM T1 
+GROUP BY ANO, SEXO, RACA, QTD
+HAVING RACA is  not null
+")
+
+#em cima da tabela acima, levei as informaçoes para o EXCEL, separei 
+#em dois grupos masculino e feminino, ordenei por raça e fiz dois gráfico
+#um por sexo masculino e outro por sexo feminino
